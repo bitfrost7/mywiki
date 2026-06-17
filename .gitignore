@@ -1,5 +1,5 @@
 # Embedded git repos (cloned code repos, not part of vault)
-privatelink/
+/privatelink/
 
 # Python bytecode
 **/__pycache__/
