@@ -1,0 +1,27 @@
+# Embedded git repos (cloned code repos, not part of vault)
+privatelink/
+
+# Generated CodeNotes (pipeline output)
+codenotes/
+
+# Python bytecode
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Obsidian local config
+.obsidian/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local config (secrets)
+.env
+*.local.yaml

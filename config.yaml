@@ -1,0 +1,91 @@
+# mywiki 全局配置
+
+# LLM API 配置
+llm:
+  # UCloud Modelverse API (OpenAI 兼容)
+  base_url: https://api.modelverse.cn
+  api_key: ${ANTHROPIC_AUTH_TOKEN}
+
+  # 可用模型列表（2025-01-25 更新）
+  # 推荐用于代码分析的模型：
+  default_model: deepseek-ai/DeepSeek-V3.2
+
+  available_models:
+    # DeepSeek 系列（推荐用于代码分析）
+    - id: deepseek-ai/DeepSeek-V3.2
+      desc: DeepSeek V3.2 - 主力代码模型，128K上下文
+    - id: deepseek-ai/DeepSeek-V3-0324
+      desc: DeepSeek V3 0324 版本
+    - id: deepseek-ai/DeepSeek-V3.1
+      desc: DeepSeek V3.1
+    - id: deepseek-ai/DeepSeek-V3.1-Think
+      desc: DeepSeek V3.1 思考模式
+    - id: deepseek-ai/DeepSeek-V3.2-Think
+      desc: DeepSeek V3.2 思考模式
+    - id: deepseek-ai/DeepSeek-V3.2-Exp
+      desc: DeepSeek V3.2 实验版
+    - id: deepseek-ai/DeepSeek-R1-0528
+      desc: DeepSeek R1 推理模型
+    - id: deepseek-ai/DeepSeek-R1-Distill-Llama-70B
+      desc: DeepSeek R1 Distill 70B
+    - id: deepseek-v4-pro
+      desc: DeepSeek V4 Pro
+    - id: deepseek-v4-flash
+      desc: DeepSeek V4 Flash（更快更便宜）
+
+    # 其他可用模型（按需使用）
+    - id: qwen3.7-plus
+      desc: Qwen 3.7 Plus
+    - id: qwen3.7-max
+      desc: Qwen 3.7 Max
+    - id: qwen3.6-plus
+      desc: Qwen 3.6 Plus
+    - id: qwen3.6-35b-a3b
+      desc: Qwen 3.6 35B A3B
+    - id: glm-5.2
+      desc: GLM 5.2
+    - id: glm-5.1
+      desc: GLM 5.1
+    - id: kimi-k2.6
+      desc: Kimi K2.6
+    - id: moonshotai/kimi-k2.5
+      desc: Kimi K2.5
+
+# 代码仓库路径配置
+repos:
+  search_paths:
+    - ~/Documents/Code/work
+    - ~/.cache/mywiki-repos
+
+# 输出配置
+output:
+  vault_path: ~/Documents/Code/work/mywiki
+  code_notes_dir: CodeNotes
+
+# 文档生成配置
+generation:
+  # 代码文件大小限制（KB）
+  max_file_size_kb: 512
+
+  # 代码上下文长度限制（字符）
+  max_code_chars: 150000
+
+  # LLM 生成参数
+  max_tokens: 8000
+  temperature: 0.2
+
+  # 关键目录优先级（按此顺序读取）
+  key_dirs:
+    - api
+    - factory
+    - db/model
+    - db
+    - server.go
+
+  # 文档类型定义
+  doc_types:
+    - architecture
+    - api
+    - db
+    - integration
+    - config
