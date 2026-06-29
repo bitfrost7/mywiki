@@ -1,0 +1,169 @@
+
+
+  
+    
+    UCloud文档中心
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+      function _howxm() {
+        _howxmQueue.push(arguments)
+      }
+      window._howxmQueue = window._howxmQueue || []
+      _howxm('setAppID', 'fe9452a3-ae2c-4c59-81b4-afecc13f245f')
+      ;(function () {
+        var scriptId = 'howxm_script'
+        if (!document.getElementById(scriptId)) {
+          var e = document.createElement('script'),
+            t = document.getElementsByTagName('script')[0]
+          e.setAttribute('id', scriptId)
+          e.type = 'text/javascript'
+          e.async = !0
+          e.src = 'https://static.howxm.com/sdk.js'
+          t.parentNode.insertBefore(e, t)
+        }
+      })()
+    
+    
+  
+
+  
+    
+      
+        
+          
+            
+          
+        
+        
+          
+            产品
+            API
+            开发
+            社区
+          
+        
+        
+          
+            
+              
+                
+                
+              
+            
+            取消
+          
+        
+      
+    
+    
+
+    
+    
+      window.$docsify = {
+        routerMode: 'history',
+        loadSidebar: true,
+        homepage: 'home.md',
+        basePath: '/',
+        notFoundPage: '404.md',
+        noEmoji: true,
+        auto2top: true,
+        topMargin: 120,
+        executeScript: true,
+        formatUpdated: function (time) {
+          const dd = new Date(time)
+          time =
+            '<p class="upTime">最近更新时间：' +
+            '<span>' +
+            dd.getFullYear() +
+            '-' +
+            appendZero(dd.getMonth() + 1) +
+            '-' +
+            appendZero(dd.getDate()) +
+            ' ' +
+            appendZero(dd.getHours()) +
+            ':' +
+            appendZero(dd.getMinutes()) +
+            ':' +
+            appendZero(dd.getSeconds()) +
+            '</span></p>'
+          return time
+
+          function appendZero(obj) {
+            if (obj < 10) return '0' + obj
+            else return obj
+          }
+        },
+        requestHeaders: {
+          'cache-control': 'no-cache',
+        },
+        alias: {
+          '/(api|usdpdc|usdp_community|UCloudStack|UCloudStack_v2.x|UCloudStor)/(.*\/)(.*\/)(.*\/)_sidebar.md':
+            '/$1/$2_sidebar.md',
+          '/(api|usdpdc|usdp_community|UCloudStack|UCloudStack_v2.x|UCloudStor)/(.*\/)(.*\/)_sidebar.md':
+            '/$1/$2_sidebar.md',
+          '/(api|usdpdc|usdp_community|UCloudStack|UCloudStack_v2.x|UCloudStor)/(.*\/)_sidebar.md': '/$1/$2_sidebar.md',
+          '/(.*\/)(.*\/)(.*\/)(.*\/)_sidebar.md': '$1_sidebar.md',
+          '/(.*\/)(.*\/)(.*\/)_sidebar.md': '$1_sidebar.md',
+          '/(.*\/)(.*\/)_sidebar.md': '$1_sidebar.md',
+          '/(.*\/)_sidebar.md': '$1_sidebar.md',
+          '/(.*).html': '$1',
+        },
+        copyCode: {
+          buttonText: 'Copy',
+          errorText: 'Error',
+          successText: 'Success',
+        },
+        pagination: {
+          previousText: 'PREVIOUS',
+          nextText: 'NEXT',
+          crossChapter: true,
+        },
+      }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+  
+

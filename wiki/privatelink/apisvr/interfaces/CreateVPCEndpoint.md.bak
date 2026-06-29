@@ -1,0 +1,120 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: CreateVPCEndpoint | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# CreateVPCEndpoint
+
+## 描述
+创建 VPC 终端节点（VPCEndpoint）接口。该接口负责在指定 VPC 和子网中创建终端节点，并与指定的终端节点服务建立连接。支持可见与不可见两种资源类型，包含完整的配额检查、权限验证、资源创建和连接建立流程。
+
+## 调用方式
+| 字段 | 值 |
+|------|:--:|
+| Action | `CreateVPCEndpoint` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/CreateVPCEndpoint.go` [[源文件:L73]] |
+
+## 请求结构
+| 字段 | 类型 | 必填 | 说明 | 来源 |
+|------|------|:----:|------|------|
+| ReqBase | ReqBase | ✅ | 基础请求字段 | [[源文件:L20]] |
+| Name | string | ❌ | 终端节点名称，默认值 "Endpoint" | [[源文件:L23]] |
+| Tag | string | ❌ | 业务组ID，默认值 "Default" | [[源文件:L26]] |
+| ChannelId | uint32 | ❌ | 渠道ID | [[源文件:L29]] |
+| VPCId | string | ✅ | 终端节点所属的 VPC 资源ID | [[源文件:L32]] |
+| SubnetId | string | ✅ | 终端节点所属的子网资源ID | [[源文件:L35]] |
+| IPVersion | string | ❌ | IP协议，枚举值：IPv4/DualStack，默认 IPv4 | [[源文件:L38]] |
+| IPv4Address | string | ❌ | 指定申请 IPv4 地址，不指定则随机分配 | [[源文件:L41]] |
+| IPv6Address | string | ❌ | 指定申请 IPv6 地址（双栈时有效） | [[源文件:L44]] |
+| ServiceId | string | ✅ | 终端节点关联的终端节点服务ID | [[源文件:L47]] |
+| SkipChannelCheck | bool | ❌ | 跳过跨渠道校验，仅创建不可见资源时有效 | [[源文件:L50]] |
+
+**ReqBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L11]]
+- request_uuid: string - 请求UUID [[源文件:base.go:L12]]
+- top_organization_id: uint32 - 顶层组织ID [[源文件:base.go:L17]]
+- organization_id: uint32 - 组织ID [[源文件:base.go:L18]]
+- az_group: uint32 - 可用区组 [[源文件:base.go:L19]]
+
+## 响应结构
+| 字段 | 类型 | 说明 | 来源 |
+|------|------|------|------|
+| RespBase | RespBase | 基础响应字段 | [[源文件:L53]] |
+| EndpointId | string | 创建的终端节点ID | [[源文件:L54]] |
+
+**RespBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L23]]
+- RetCode: int - 返回码，0表示成功 [[源文件:base.go:L24]]
+- Message: string - 返回消息 [[源文件:base.go:L25]]
+
+## 业务逻辑
+1. **解析校验请求参数**：使用 `parseInput` 方法解析请求并验证必填字段 [[源文件:L79]]
+2. **设置默认值**：调用 `setDefaultValue` 方法为可选字段设置默认值 [[源文件:L83]]
+   - IPVersion 默认 "IPv4"
+   - Name 默认 "Endpoint"
+   - Tag 默认 "Default"
+3. **配额检查**：对于可见资源，检查空闲终端节点配额限制 [[源文件:L85-L94]]
+4. **获取服务信息**：查询指定的终端节点服务信息 [[源文件:L97-L115]]
+   - 验证服务是否存在
+   - 检查服务是否已关闭
+5. **可见性校验**：不可见终端节点必须是服务端付费 [[源文件:L117-L121]]
+6. **渠道校验**：验证请求渠道与服务渠道是否匹配 [[源文件:L123-L129]]
+   - 支持通过 SkipChannelCheck 参数跳过跨渠道校验
+7. **连接数检查**：检查服务已连接的终端节点数量是否超过配额 [[源文件:L131-L140]]
+8. **白名单校验**：检查请求公司是否在服务白名单中 [[源文件:L144-L168]]
+   - 如果服务属于当前公司，则允许创建
+   - 如果未设置白名单，则允许创建
+   - 否则检查白名单记录
+9. **网络资源校验**：验证 VPC 和子网信息的有效性 [[源文件:L170-L174]]
+10. **IP地址验证**：验证指定的 IPv4/IPv6 地址是否合法 [[源文件:L176-L188]]
+11. **获取网关信息**：查询服务所在网关的 DPID [[源文件:L190-L195]]
+12. **创建资源记录**：在资源系统中创建终端节点资源 [[源文件:L197-L201]]
+13. **资源购买**：如果服务是 Endpoint 付费模式，购买后付费资源 [[源文件:L203-L211]]
+14. **IP地址分配**：分配 IPv4 和 IPv6（双栈模式）地址 [[源文件:L213-L239]]
+15. **数据库记录**：在数据库中创建终端节点记录 [[源文件:L241-L247]]
+16. **资源激活**：更新资源扩展信息并激活资源 [[源文件:L249-L254]]
+17. **连接建立**：如果服务配置了自动接受，异步建立连接 [[源文件:L256-L258]]
+
+## 错误处理
+| 错误场景 | 错误码 | 说明 | 来源 |
+|----------|:------:|------|------|
+| 请求参数验证失败 | 230 | RequestParamsErr | [[源文件:L81]] |
+| 空闲终端节点配额超限 | 217819 | IdleEPQuotaExceededErr | [[源文件:L93]] |
+| 资源不存在 | 217803 | ResourceNotFoundErr | [[源文件:L104]] |
+| 服务已关闭 | 217811 | ServiceHasBeenClosedErr | [[源文件:L114]] |
+| 不可见终端节点付费方错误 | 217831 | InvisibleEndpointPayerErr | [[源文件:L120]] |
+| 渠道不匹配 | 217834 | ChannelDisMatchErr | [[源文件:L128]] |
+| 连接配额超限 | 217822 | ConnectEPQuotaExceededErr | [[源文件:L139]] |
+| 权限拒绝 | 217812 | PermissionIsDeniedErr | [[源文件:L167]] |
+| VPC分配IP失败 | 217820 | VPCAllocateIPErr | [[源文件:L218]] |
+| VPC不支持IPv6 | 217827 | VPCNotSupportIPv6Err | [[源文件:L230]] |
+| 资源配额超限 | 217818 | ResourceQuotaExceededErr | [[源文件:L274]] |
+| 内部服务器错误 | 500 | InternalServerErr | [[源文件:L90]] |
+
+## 典型用例
+1. **创建可见终端节点**：
+   - 指定 VPCId、SubnetId、ServiceId
+   - 可指定 IP 地址或使用随机分配
+   - 系统自动检查配额和权限
+
+2. **创建不可见终端节点**：
+   - 设置 SkipChannelCheck 参数跳过渠道校验
+   - 必须是服务端付费模式
+   - 不占用可见资源配额
+
+3. **双栈网络支持**：
+   - 设置 IPVersion 为 "DualStack"
+   - 可同时指定 IPv4Address 和 IPv6Address
+   - 系统自动验证 VPC 是否支持 IPv6
+
+## 回滚机制
+创建过程中出现任何失败都会触发回滚操作，确保数据一致性 [[源文件:L207-L365]]：
+- 删除已分配的 IP 地址
+- 取消已购买的资源
+- 删除数据库记录
+- 清理资源系统中的记录
+
+## 相关接口
+- [[privatelink/apisvr/interfaces/DeleteVPCEndpoint]] - 删除终端节点
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpoints]] - 查询终端节点列表
+- [[privatelink/apisvr/interfaces/UpdateVPCEndpointAttribute]] - 更新终端节点属性
+- [[privatelink/apisvr/interfaces/CreateVPCEndpointServiceConfiguration]] - 创建终端节点服务配置

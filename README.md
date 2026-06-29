@@ -1,6 +1,6 @@
-# mywiki
+# mywiki v4 — 个人知识库
 
-一个人的知识库。你读的、写的、做过的，都放这里。
+一个由源码、文档和个人总结驱动的 Wiki 知识库。
 
 ## Vault 路径
 
@@ -9,16 +9,23 @@
 ## 目录
 
 | 目录 | 用途 |
-|---|---|
-| `Knowledge/` | 知识领域文档（业务系统、领域研究、项目架构） |
-| `CodeNotes/` | 代码库摘要（pipeline 自动生成） |
-| `Learnings/` | 学习总结、读书笔记、技术调研 |
-| `Daily/` | 日报、周报、想法记录 |
-| `Wiki/` | LLM Wiki 编译页面（概念、实体、跨领域综合） |
-| `Brain/` | Agent 确定性记忆（open-second-brain 插件管理） |
+|------|------|
+| `Wiki/` | 知识页面（唯一的知识文档目录，按领域分） |
+| `raw/articles/` | 外部文章原始资料 |
+| `raw/docs/` | 内部文档原始资料 |
+| `raw/assets/` | 代码仓库（软链接或克隆） |
+| `raw/config.yaml` | 数据源配置 |
+| `Brain/` | Agent 确定性记忆（open-second-brain 管理） |
+| `_archive/` | 旧版设计文档 |
+| `mywiki.db` | 页面元信息（状态、置信度、来源、反馈） |
 
-## 笔记规范
+## 核心流程
 
-- 用 Obsidian 的 `[[wikilink]]` 做关联
-- 每条笔记用 YAML frontmatter 标注 tags / created / updated
-- 知识是提炼的，不是搬运的
+```
+源码/文档/文章 → Kanban 编译 → Wiki/ 页面 → 使用中反馈 → OSB sig→dream → 修复/新增
+```
+
+## 设计文档
+
+最新方案：`design-v4.md`
+历史方案：`_archive/`

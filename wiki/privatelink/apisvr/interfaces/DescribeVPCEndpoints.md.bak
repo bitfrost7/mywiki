@@ -1,0 +1,188 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: DescribeVPCEndpoints | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# DescribeVPCEndpoints
+
+## 描述
+查询 VPC 终端节点列表接口。该接口负责根据终端节点ID、VPC ID、子网ID等条件查询和筛选终端节点信息，支持分页查询功能。当指定终端节点ID时，将忽略其他过滤条件。查询结果包含终端节点详细信息、资源平台扩展信息和关联的服务信息。
+
+## 调用方式
+| 字段 | 值 |
+|------|:--:|
+| Action | `DescribeVPCEndpoints` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/DescribeVPCEndpoints.go` [[源文件:L47]] |
+
+## 请求结构
+| 字段 | 类型 | 必填 | 说明 | 来源 |
+|------|------|:----:|------|------|
+| ReqBase | ReqBase | ✅ | 基础请求字段 | [[源文件:L15-L16]] |
+| EndpointIds | []string | ❌ | 终端节点ID列表，若非空，则将忽略其他过滤条件 | [[源文件:L18-L19]] |
+| VPCId | string | ❌ | 限定所在的VPC ID | [[源文件:L21-L22]] |
+| SubnetId | string | ❌ | 限定所在的子网ID | [[源文件:L24-L25]] |
+| Offset | uint32 | ❌ | 数据偏移量，默认值为0 | [[源文件:L27-L28]] |
+| Limit | uint32 | ❌ | 数据分页值，默认值为100 | [[源文件:L30-L31]] |
+
+**ReqBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L11]]
+- request_uuid: string - 请求UUID [[源文件:base.go:L12]]
+- top_organization_id: uint32 - 顶层组织ID [[源文件:base.go:L17]]
+- organization_id: uint32 - 组织ID [[源文件:base.go:L18]]
+- az_group: uint32 - 可用区组 [[源文件:base.go:L19]]
+
+## 请求验证规则
+1. **EndpointIds长度限制**：
+   - EndpointIds 最多包含20个元素 [[源文件:L19]]
+2. **EndpointIds优先逻辑**：
+   - 当 EndpointIds 不为空时，忽略 VPCId 和 SubnetId 过滤条件 [[源文件:L66-L70]]
+
+## 默认值设置
+| 字段 | 默认值 | 来源 |
+|------|:------:|------|
+| Limit | 100 | [[源文件:L41-L45]] |
+
+## 响应结构
+| 字段 | 类型 | 说明 | 来源 |
+|------|------|------|------|
+| RespBase | RespBase | 基础响应字段 | [[源文件:L34-L35]] |
+| TotalCount | uint32 | 终端节点总数 | [[源文件:L36]] |
+| Endpoints | []*EndpointInfo | 终端节点列表 | [[源文件:L37]] |
+
+**RespBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L23]]
+- RetCode: int - 返回码，0表示成功 [[源文件:base.go:L24]]
+- Message: string - 返回消息 [[源文件:base.go:L25]]
+
+**EndpointInfo 结构**：
+| 字段 | 类型 | 说明 | 来源 |
+|------|------|------|------|
+| EndpointId | string | 终端节点ID | [[源文件:base.go:L34]] |
+| Name | string | 终端节点名称（来自资源平台扩展信息） | [[源文件:base.go:L35]] |
+| Tag | string | 终端节点标签（来自资源平台扩展信息） | [[源文件:base.go:L36]] |
+| VPCId | string | VPC ID | [[源文件:base.go:L37]] |
+| SubnetId | string | 子网ID | [[源文件:base.go:L38]] |
+| IPVersion | string | IP版本：IPv4/DualStack | [[源文件:base.go:L39]] |
+| IPv4Address | string | IPv4地址 | [[源文件:base.go:L40]] |
+| IPv6Address | string | IPv6地址 | [[源文件:base.go:L41]] |
+| ServiceId | string | 关联的服务ID | [[源文件:base.go:L42]] |
+| ServiceDescription | string | 服务描述 | [[源文件:base.go:L43]] |
+| ConnectBandwidth | uint32 | 连接带宽（Mbps） | [[源文件:base.go:L44]] |
+| Payer | string | 付费方：Endpoint/EndpointService | [[源文件:base.go:L45]] |
+| ConnectionStatus | string | 连接状态：Pending/Connected/Disconnected/ServiceDeleted | [[源文件:base.go:L46]] |
+| CreateTime | uint32 | 创建时间（Unix时间戳） | [[源文件:base.go:L47]] |
+| UpdateTime | uint32 | 更新时间（Unix时间戳） | [[源文件:base.go:L48]] |
+
+## 业务逻辑
+1. **解析校验请求参数**：使用 `parseInput` 方法解析请求并验证必填字段 [[源文件:L59-L63]]
+2. **设置默认值**：调用 `setDefaultValue` 方法为 Limit 字段设置默认值100 [[源文件:L64]]
+3. **过滤条件优先级处理**：
+   - 如果指定了 EndpointIds，忽略 VPCId 和 SubnetId 过滤条件 [[源文件:L66-L70]]
+   - VPCId 和 SubnetId 设置为空字符串 [[源文件:L68-L69]]
+4. **查询数据库终端节点信息**：
+   - 调用数据库层 `DescribeVPCEndpoints` 方法查询终端节点数据 [[源文件:L72]]
+   - 传入查询条件：accountID（组织ID）、invisible（可见性）、endpointIDs、vnetID（VPC ID）、subnetworkID（子网ID） [[源文件:L72]]
+   - 返回包含服务信息的联合查询结果 [[源文件:db/db.go:L450-L492]]
+5. **资源平台信息查询（如果需要）**：
+   - 如果数据库有记录，则根据查询方式选择调用资源平台接口：
+     - 指定了 EndpointIds：调用 `GetVPCEndpointResourceListByIds` 按ID查询 [[源文件:L80-L82]]
+     - 未指定 EndpointIds：调用 `GetVPCEndpointResourceList` 按VPC、子网等条件查询 [[源文件:L82-L84]]
+   - 获取资源的扩展信息（名称、标签等） [[源文件:L105-L157]]
+6. **构建响应数据**：
+   - 调用 `buildVPCEndpointInfosResponse` 方法将数据库模型和资源信息转换为响应格式 [[源文件:L92]]
+   - 确定 IP 版本：如果有 IPv6 则为 DualStack，否则为 IPv4 [[源文件:L115-L118]]
+   - 确定连接状态：如果服务被删除则状态为 ServiceDeleted [[源文件:L119-L122]]
+   - 从资源平台扩展信息获取 name 和 tag 字段 [[源文件:L123-L134]]
+7. **排序返回结果**：
+   - 按创建时间倒序排序 [[源文件:L153-L156]]
+8. **返回查询结果**：
+   - 返回包含 TotalCount（总数）和 Endpoints（终端节点列表）的响应 [[源文件:L94-L102]]
+
+## 付费方转换函数
+**GetPayerName**：将付费方状态码转换为字符串 [[源文件:convert.go:L68-L77]]
+- 1 → "Endpoint" [[源文件:convert.go:L70-L71]]
+- 0 → "EndpointService" [[源文件:convert.go:L72-L73]]
+- 其他值 → "EndpointService" [[源文件:convert.go:L74-L75]]
+
+## 连接状态转换函数
+**GetConnectStatusName**：将连接状态码转换为字符串状态 [[源文件:convert.go:L120-L133]]
+- 0 → "Pending" [[源文件:convert.go:L122-L123]]
+- 1 → "Connected" [[源文件:convert.go:L124-L125]]
+- 2 → "Disconnected" [[源文件:convert.go:L126-L127]]
+- 100 → "ServiceDeleted" [[源文件:convert.go:L128-L129]]
+- 其他值 → "Disconnected" [[源文件:convert.go:L130-L131]]
+
+## 错误处理
+| 错误场景 | 错误码 | 说明 | 来源 |
+|----------|:------:|------|------|
+| 请求参数验证失败 | 230 | RequestParamsErr | [[源文件:L61-L63]] |
+| 数据库查询失败 | 500 | InternalServerErr | [[源文件:L73-L75]] |
+| 资源平台查询失败 | 500 | InternalServerErr | [[源文件:L85-L88]] |
+| 内部服务器错误 | 500 | InternalServerErr | [[源文件:L63]] |
+
+## 典型用例
+1. **查询指定组织的所有终端节点**：
+   - 不指定任何过滤条件
+   - 返回该组织下的所有终端节点列表（按创建时间倒序）
+
+2. **按VPC ID筛选终端节点**：
+   - VPCId: "vnet-xxxx"
+   - 返回指定VPC下的所有终端节点
+
+3. **按子网ID筛选终端节点**：
+   - SubnetId: "subnet-xxxx"
+   - 返回指定子网下的所有终端节点
+
+4. **查询特定终端节点详情**：
+   - EndpointIds: ["endpoint-xxxx"]
+   - 忽略其他过滤条件，直接返回指定终端节点的详细信息
+
+5. **批量查询多个终端节点**：
+   - EndpointIds: ["endpoint-1", "endpoint-2", "endpoint-3"]
+   - 最多支持20个终端节点ID
+   - 返回指定终端节点列表的详细信息
+
+6. **分页查询终端节点列表**：
+   - Offset: 20（跳过前20条）
+   - Limit: 50（每页50条）
+   - 返回分页后的终端节点列表
+
+## 数据模型映射
+**数据库模型 TVpcEndpoint → EndpointInfo 映射**：
+| 数据库字段 | 响应字段 | 说明 | 来源 |
+|-----------|----------|------|------|
+| EndpointID | EndpointId | 终端节点ID | [[源文件:L136]] |
+| VnetID | VPCId | VPC ID | [[源文件:L139]] |
+| SubnetworkID | SubnetId | 子网ID | [[源文件:L140]] |
+| Ipv4 | IPv4Address | IPv4地址 | [[源文件:L142]] |
+| Ipv6 | IPv6Address | IPv6地址 | [[源文件:L143]] |
+| ServiceID | ServiceId | 服务ID | [[源文件:L144]] |
+| SDescription | ServiceDescription | 服务描述 | [[源文件:L145]] |
+| ConnectBw | ConnectBandwidth | 连接带宽 | [[源文件:L146]] |
+| SPayer | Payer | 付费方（经过转换） | [[源文件:L147]] |
+| ConnectStatus | ConnectionStatus | 连接状态（经过转换） | [[源文件:L148]] |
+| InsertTime | CreateTime | 创建时间 | [[源文件:L149]] |
+| UpdateTime | UpdateTime | 更新时间 | [[源文件:L150]] |
+
+**资源平台扩展信息**：
+| 扩展信息字段 | 响应字段 | 说明 | 来源 |
+|--------------|----------|------|------|
+| name | Name | 终端节点名称 | [[源文件:L130-L132]] |
+| tag | Tag | 终端节点标签 | [[源文件:L132-L133]] |
+
+## 辅助函数
+1. **setDefaultValue**：设置 Limit 默认值100 [[源文件:L41-L45]]
+2. **buildVPCEndpointInfosResponse**：将数据库模型和资源信息转换为响应结构 [[源文件:L105-L157]]
+3. **GetPayerName**：付费方状态码转字符串 [[源文件:convert.go:L68-L77]]
+4. **GetConnectStatusName**：连接状态码转字符串 [[源文件:convert.go:L120-L133]]
+
+## 资源平台接口
+1. **GetVPCEndpointResourceListByIds**：按终端节点ID列表查询资源平台信息 [[源文件:factory/uresource/expand.go:L100-L124]]
+2. **GetVPCEndpointResourceList**：按VPC、子网等条件查询资源平台信息 [[源文件:factory/uresource/expand.go:L69-L97]]
+3. **buildExtendInfoList**：构建资源扩展信息（名称、标签） [[源文件:factory/uresource/expand.go:L267-L295]]
+
+## 相关接口
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointConnections]] - 查询终端节点连接列表
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointServiceConfiguration]] - 查询终端节点服务配置详情
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointServices]] - 查询终端节点服务列表
+- [[privatelink/apisvr/interfaces/CreateVPCEndpoint]] - 创建终端节点
+- [[privatelink/apisvr/interfaces/DeleteVPCEndpoint]] - 删除终端节点

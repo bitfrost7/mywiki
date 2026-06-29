@@ -1,0 +1,61 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: AcceptVPCEndpointConnection | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# AcceptVPCEndpointConnection
+
+## 描述
+
+接受 VPC 终端节点连接请求，将终端节点与终端节点服务建立连接。接口验证终端节点和服务的存在性，设置连接带宽，并更新连接状态为已连接。[[源文件:L10-L83]]
+
+## 调用方式
+
+| 字段 | 值 |
+|------|:--:|
+| Action | `AcceptVPCEndpointConnection` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/AcceptVPCEndpointConnection.go` |
+
+## 请求结构
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| ServiceId | string | ✅ | 终端节点关联的终端节点服务ID [[源文件:L15-L16]] |
+| EndpointId | string | ✅ | 终端节点的ID [[源文件:L18-L19]] |
+| ConnectBandwidth | uint32 | ❌ | 默认连接带宽值。单位Mbps，默认值100，取值范围：100~10000 [[源文件:L21-L22]] |
+
+## 响应结构
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| (继承 RespBase) | - | 响应基类，包含请求ID、错误码等通用字段 [[源文件:L25-L27]] |
+
+## 业务逻辑
+
+1. **参数解析与验证**: 解析请求参数，验证 ServiceId 和 EndpointId 必填，ConnectBandwidth 在有效范围内 (100-10000 Mbps) [[源文件:L32-L36]]
+
+2. **终端节点连接查询**: 从数据库查询指定 EndpointId 和 ServiceId 的终端节点连接信息 [[源文件:L38-L42]]
+
+3. **终端节点验证**: 检查查询结果，如果找不到对应终端节点连接则返回资源不存在错误 [[源文件:L43-L45]]
+
+4. **服务信息查询**: 从数据库查询对应 ServiceId 的服务详细信息 [[源文件:L52-L56]]
+
+5. **服务验证**: 检查查询结果，如果找不到对应服务则返回资源不存在错误 [[源文件:L57-L63]]
+
+6. **带宽设置**: 如果请求未提供 ConnectBandwidth，则使用服务的默认连接带宽 ConnectBw [[源文件:L66-L68]]
+
+7. **状态检查**: 如果终端节点已处于连接状态且带宽与请求一致，则直接返回成功 [[源文件:L69-L71]]
+
+8. **状态更新**: 更新终端节点连接状态为已连接 (ConnectStatusConnectedInt)，并设置连接带宽 [[源文件:L73-L77]]
+
+9. **连接信息创建**: 如果终端节点非停服状态且之前未连接，则异步创建连接信息 [[源文件:L78-L81]]
+
+## AST 引用
+
+- 社区: [[Community N]]
+- God 节点: 待补充
+
+## 相关接口
+
+- [[privatelink/apisvr/interfaces/CreateVPCEndpointConnection|CreateVPCEndpointConnection]] - 创建终端节点连接
+- [[privatelink/apisvr/interfaces/DeleteVPCEndpointConnection|DeleteVPCEndpointConnection]] - 删除终端节点连接
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointConnection|DescribeVPCEndpointConnection]] - 查询终端节点连接详情

@@ -1,0 +1,66 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: AddUsersToVPCEndpointService | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# AddUsersToVPCEndpointService
+
+## 描述
+向 VPC 终端节点服务添加用户白名单。该接口允许服务管理员将公司用户添加到服务的白名单中，只有白名单中的用户才能连接到该服务。
+
+## 调用方式
+| 字段 | 值 |
+|------|:--:|
+| Action | `AddUsersToVPCEndpointService` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/AddUsersToVPCEndpointService.go` |
+
+## 请求结构
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `ServiceId` | string | ✅ | 终端节点服务ID |
+| `Users` | []*AddEndpointServiceUser | ✅ | 用户信息，最多支持100个用户 [[源文件:20]] |
+| `Users[i].CompanyId` | uint32 | ✅ | 公司ID [[源文件:30]] |
+| `Users[i].Remark` | string | ❌ | 备注，最大字符长度255 [[源文件:32]] |
+| `ReqBase` | ReqBase | ✅ | 基础请求字段，包含 OrgID、Region、Zone 等公共参数 |
+
+## 响应结构
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `RespBase` | *RespBase | 基础响应字段，包含 RequestId、Action、RetCode、Message 等 |
+
+## 业务逻辑
+
+1. **参数解析与验证**: 解析请求参数并进行基础格式验证 [[源文件:39-43]] 
+
+2. **业务参数校验**: 执行详细的业务逻辑验证 [[源文件:46-48]] 
+   - 检查 `CompanyId` 是否重复 [[源文件:78-86]]
+   - 验证服务是否属于当前项目 [[源文件:88-96]]
+   - 验证公司ID是否真实存在 [[源文件:98-106]]
+   - 检查白名单记录是否已存在 [[源文件:108-116]]
+
+3. **创建白名单记录**: 将所有验证通过的用户信息批量插入到服务白名单表中 [[源文件:51-54][源文件:61-73]] 
+   - 为每个用户创建一条 `TServiceWhitelist` 记录
+   - 记录包含 ServiceID、CompanyID、Remark、InsertTime 等字段
+   - 批量提交到数据库
+
+4. **返回结果**: 生成响应并返回给客户端 [[源文件:56-58]]
+
+## 验证规则
+
+1. **必填字段**: ServiceId、Users 数组必填 [[源文件:19-21]]
+2. **数组限制**: Users 数组最多支持100个用户 [[源文件:21]]
+3. **字段唯一性**: CompanyId 在请求中不能重复 [[源文件:78-83]]
+4. **服务权限**: 服务必须属于当前项目 [[源文件:89-96]]
+5. **公司验证**: 所有 CompanyId 必须是真实存在的公司 [[源文件:99-106]]
+6. **防止重复**: 相同的 CompanyId 不能在同一个服务的白名单中重复添加 [[源文件:109-116]]
+
+## 错误码
+
+| 错误码 | 描述 | 触发条件 |
+|--------|------|----------|
+| `RequestParamsErr` | 请求参数错误 | 参数格式错误、CompanyId重复、非法公司ID |
+| `ServiceNotExistErr` | 服务不存在 | 服务ID不属于当前项目或不存在 |
+| `RecordAlreadyExistsErr` | 白名单已存在 | 相同公司已在该服务白名单中 |
+| `InternalServerErr` | 内部服务器错误 | 数据库操作失败、外部服务调用失败 |
+
+## 相关接口
+- [[privatelink/apisvr/interfaces/RemoveUsersFromVPCEndpointService]] - 从服务白名单中移除用户

@@ -1,0 +1,165 @@
+# mywiki-code-import — 代码入库管线: AST 分析 → 文档生成 → 审查 → 修复
+#
+# 从 profiles/workflow.yaml 转换而来，兼容 hermes-workflow 插件 schema。
+# 行为逻辑未改变，仅语法适配：
+#   {{ .var }} → {{ VAR }}     去点前缀
+#   run:        → script:      字段重命名
+#   kanban_batch → script + for_each: kanban 拆解
+#   kanban_wait  → 删除          runner 自动等待
+#   trigger:     → 删除          不参与 schema
+#   if: 条件     → shell test    脚本内处理
+
+meta:
+  name: mywiki-code-import
+  version: 1.0.0
+  description: "代码入库管线 — AST 分析 → 文档生成 → 审查 → 修复"
+
+vars:
+  VAULT: "/Users/user/Documents/Code/work/mywiki"
+  SERVICE: ""                        # 通过 --var SERVICE=xxx 传入
+
+settings:
+  concurrency: 3
+  poll_interval: 15
+  cleanup_on_error: true
+
+steps:
+
+  # ── Step 1: 确定性分析 ──
+  # 行为: bash analyze.sh graph.json → stdout JSON 注入 l1_json
+  - id: analyze
+    type: script
+    script: |
+      bash {{ VAULT }}/bin/analyze.sh \
+        {{ VAULT }}/raw/assets/ast/privatelink/{{ SERVICE }}/graphify-out/graph.json
+    output: l1_json
+
+  # ── Step 2: 初始化 discuss ──
+  # 行为: 如果 task.json 不存在才 init
+  - id: init_discuss
+    type: script
+    script: |
+      if [ ! -f "{{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/task.json" ]; then
+        {{ VAULT }}/bin/discuss init \
+          {{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss {{ SERVICE }}
+      fi
+
+  # ── Step 3: 生成 task.json ──
+  # 行为: 从 l1_json 生成任务列表，写 task.json + 同时 print 给下游
+  - id: generate_tasks
+    type: script
+    depends_on: []
+    script: |
+      {{ VAULT }}/bin/generate-tasks.py \
+        {{ VAULT }} {{ SERVICE }}
+    output: task_data
+
+  # ── Step 4: 读取 task list 给 kanban for_each ──
+  # 行为: 把 task_data 中的 tasks 数组展平为列表变量
+  - id: prepare_task_list
+    type: script
+    script: |
+      echo 'extracted'
+    output: task_list_extracted
+
+  # ── Step 5: Writer 创卡 ──
+  # 行为: 根据 task.json 遍历每条 task 创建 writer 卡
+  - id: writer
+    type: kanban
+    for_each: "{{ task_data.tasks }}"
+    template:
+      title: "writer: {{ item.title }}"
+      assignee: writer
+      skill: "{{ item.skill }}"
+      workspace: "dir:{{ VAULT }}"
+      body: |
+        action={{ item.action }}
+        output_dir={{ VAULT }}/Wiki/privatelink/{{ SERVICE }}
+        source_dir={{ VAULT }}/raw/assets/repo/privatelink/{{ SERVICE }}
+        templates_dir={{ VAULT }}/templates
+        discuss_path={{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss
+        {% if item.source_files %}src_file={{ item.source_files.0 }}{% endif %}
+
+  # ── Step 6: Reviewer 创卡（依赖 writer）──
+  # 行为: 每条 task 创建一张 reviewer 卡，parent ＝ writer 卡
+  - id: reviewer
+    type: kanban
+    depends_on: [writer]
+    for_each: "{{ task_data.tasks }}"
+    template:
+      title: "review: {{ item.title }}"
+      assignee: reviewer
+      skill: review-sk
+      workspace: "dir:{{ VAULT }}"
+      body: |
+        doc_file={{ item.doc_files.0 }}
+        discuss_path={{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss
+
+  # ── Step 7: 检查 discuss 结果 ──
+  # 行为: discuss verify → exit 0 = 全部解决 goto done; else 进入 fix 循环
+  - id: check_discuss
+    type: script
+    depends_on: [reviewer]
+    script: |
+      {{ VAULT }}/bin/discuss verify \
+        {{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss
+    on_exit:
+      0:
+        goto: done
+      else:
+        goto: fix_cycle
+
+  # ── Step 8: fix 循环 ──
+  # 行为: 最多 10 轮，每轮列出 discuss → 创建 fix+re-review 卡 → 等待 → 检查
+  - id: fix_cycle
+    type: loop
+    max_iterations: 10
+    while: "steps.check_discuss.exit_code != 0"
+    steps:
+
+      # 8a: 列出未解决的 discuss
+      - id: get_open
+        type: script
+        script: |
+          {{ VAULT }}/bin/discuss list \
+            {{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss 2>/dev/null || echo '[]'
+
+      # 8b: Fix 创卡（每张 open discuss 一张 fix 卡）
+      - id: fix
+        type: kanban
+        template:
+          title: "fix: {{ SERVICE }}"
+          assignee: writer
+          skill: fix-sk
+          workspace: "dir:{{ VAULT }}"
+          body: |
+            discuss_path={{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss
+
+      # 8c: Re-review 创卡（依赖 fix）
+      - id: re_review
+        type: kanban
+        depends_on: [fix]
+        template:
+          title: "re-review: {{ SERVICE }}"
+          assignee: reviewer
+          skill: review-sk
+          workspace: "dir:{{ VAULT }}"
+          body: |
+            doc_file=interfaces/{{ SERVICE }}.md
+            discuss_path={{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss
+
+      # 8d: 再次检查
+      - id: check_again
+        type: script
+        depends_on: [re_review]
+        script: |
+          {{ VAULT }}/bin/discuss verify \
+            {{ VAULT }}/raw/assets/privatelink/{{ SERVICE }}/discuss
+        on_exit:
+          0:
+            goto: done
+
+  # ── 完成 ──
+  - id: done
+    type: noop
+    summary: "管线完成: {{ SERVICE }}"

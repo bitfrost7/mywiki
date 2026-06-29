@@ -1,0 +1,16 @@
+model:
+  default: deepseek-ai/DeepSeek-V3.2
+  provider: custom
+  base_url: https://api.modelverse.cn/v1
+  api_key: nFzDY6ygaRWnDrQL1eA11aB2-4294-4284-885A-B7Ac3dE0
+agent:
+  max_turns: 150
+  api_max_retries: 3
+  tool_use_enforcement: auto
+onboarding:
+  seen:
+    tool_progress_prompt: true
+terminal:
+  cwd: /Users/user/Documents/Code/work/mywiki/raw
+kanban:
+  max_in_progress_per_profile: 3

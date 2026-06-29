@@ -1,0 +1,82 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: DescribeVPCEndpointServices | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# DescribeVPCEndpointServices
+
+## 描述
+查询VPC终端节点服务列表接口。支持按服务ID精确查询或分页查询所有服务，查询结果会进行白名单过滤。[[源文件:api/DescribeVPCEndpointServices.go:L9]]
+
+## 调用方式
+| 字段 | 值 |
+|------|:--:|
+| Action | `DescribeVPCEndpointServices` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/DescribeVPCEndpointServices.go` |
+
+## 请求结构
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| ServiceIds | []string | ❌ | 服务ID列表。若非空，则将忽略其他过滤条件，最多20个[[源文件:api/DescribeVPCEndpointServices.go:L14]] |
+| Offset | uint32 | ❌ | 数据偏移量，默认为0[[源文件:api/DescribeVPCEndpointServices.go:L17]] |
+| Limit | uint32 | ❌ | 数据分页值，默认为100[[源文件:api/DescribeVPCEndpointServices.go:L20]] |
+| top_organization_id | uint32 | ✅ | 顶层组织ID[[源文件:api/base.go:L17]] |
+| organization_id | uint32 | ✅ | 组织ID[[源文件:api/base.go:L18]] |
+| az_group | uint32 | ✅ | 可用区组[[源文件:api/base.go:L19]] |
+
+## 响应结构
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| Action | string | 响应动作名[[源文件:api/base.go:L23]] |
+| RetCode | int | 返回码[[源文件:api/base.go:L24]] |
+| Message | string | 返回信息[[源文件:api/base.go:L25]] |
+| TotalCount | uint32 | 符合条件的服务总数[[源文件:api/DescribeVPCEndpointServices.go:L25]] |
+| Services | []*EndpointServiceInfo | 服务信息列表[[源文件:api/DescribeVPCEndpointServices.go:L26]] |
+
+### EndpointServiceInfo 结构
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| ServiceId | string | 服务ID[[源文件:api/base.go:L72]] |
+| Description | string | 服务描述[[源文件:api/base.go:L73]] |
+| Payer | string | 付费方[[源文件:api/base.go:L74]] |
+| ConnectBandwidth | uint32 | 连接带宽（Mbps）[[源文件:api/base.go:L75]] |
+
+## 业务逻辑
+
+1. **参数解析与默认值设置** [[源文件:api/DescribeVPCEndpointServices.go:L36-L43]]
+   - 解析请求参数，验证必填字段
+   - 如果Limit为0，则设置为默认值100
+
+2. **数据查询路径选择** [[源文件:api/DescribeVPCEndpointServices.go:L48-L52]]
+   - 如果指定了ServiceIds，则调用`DescribeVPCEndpointServices`精确查询
+   - 否则调用`DescribeVPCEndpointServicesByPage`分页查询
+
+3. **白名单过滤处理** [[源文件:api/DescribeVPCEndpointServices.go:L59-L70]]
+   - 当通过ServiceIds精确查询时，需要查询服务的白名单记录
+   - 调用`filterWithWhiteList`函数进行过滤，规则：
+     - 返回自己公司companyID的服务
+     - 返回没有设置白名单的服务  
+     - 返回设置了白名单且自己companyID在白名单中的服务
+
+4. **响应数据构建** [[源文件:api/DescribeVPCEndpointServices.go:L79-L91]]
+   - 调用`buildVPCEndpointServiceInfosResponse`构建响应数据
+   - 转换数据库模型到API响应结构
+   - 通过`GetPayerName`函数将付费方编码转换为可读名称
+
+### 白名单过滤详细规则 [[源文件:api/DescribeVPCEndpointServices.go:L94-L122]]
+1. **白名单映射构建**：将白名单记录按服务ID和公司ID建立映射
+2. **过滤逻辑**：
+   - 服务所属公司ID == 当前公司ID → 返回（自己的服务）
+   - 服务未设置白名单 → 返回（公开服务）
+   - 服务设置了白名单且当前公司在白名单中 → 返回
+   - 服务设置了白名单但当前公司不在白名单中 → 过滤掉
+
+## 错误处理
+| 错误码 | 描述 |
+|--------|------|
+| RequestParamsErr | 请求参数错误 |
+| InternalServerErr | 内部服务器错误 |
+
+## 相关接口
+- [[privatelink/apisvr/interfaces/CreateVPCEndpointServiceConfiguration|CreateVPCEndpointServiceConfiguration]] - 创建服务配置
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointServiceConfiguration|DescribeVPCEndpointServiceConfiguration]] - 查询服务配置详情
+- [[privatelink/apisvr/interfaces/DeleteVPCEndpointServiceConfiguration|DeleteVPCEndpointServiceConfiguration]] - 删除服务配置

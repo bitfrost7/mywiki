@@ -1,0 +1,130 @@
+# mywiki v4 — 数据源配置
+#
+# raw/ 下的原始数据来源定义。
+# 所有敏感信息通过环境变量引用（${VAR_NAME}），不写入明文。
+#
+# 使用方式：
+#   bin/sync.sh          — 同步全部数据源
+#   bin/sync.sh --code   — 只同步代码仓库
+#   bin/sync.sh --doc    — 只同步文档
+#   bin/sync.sh --url    — 只同步文章
+
+# ============================================================
+# 代码仓库
+# ============================================================
+code:
+  # 默认拉取行为
+  default_branch: master
+  clone_depth: 1                  # 只拉最新提交，节省空间
+
+  repos:
+    # ── Privatelink 业务线 ──
+    - name: privatelink/apisvr
+      url: git@git.ucloudadmin.com:unetworks/privatelink/apisvr.git
+      branch: master
+      description: "Privatelink API 服务 — EIP 网关入口"
+      output: Wiki/privatelink/    # 知识产出目录
+
+    - name: privatelink/billing
+      url: git@git.ucloudadmin.com:unetworks/privatelink/billing.git
+      branch: master
+      description: "Privatelink 计费服务"
+      output: Wiki/privatelink/
+
+    - name: privatelink/billinsert
+      url: git@git.ucloudadmin.com:unetworks/privatelink/billinsert.git
+      branch: master
+      description: "Privatelink 计费入库服务"
+      output: Wiki/privatelink/
+
+    - name: privatelink/bwregister
+      url: git@git.ucloudadmin.com:unetworks/privatelink/bwregister.git
+      branch: master
+      description: "Privatelink 带宽注册服务"
+      output: Wiki/privatelink/
+
+    - name: privatelink/privatelink-l4fe
+      url: git@git.ucloudadmin.com:unetworks/privatelink/privatelink-l4fe.git
+      branch: master
+      description: "Privatelink L4 Forward Engine"
+      output: Wiki/privatelink/
+
+    - name: privatelink/privatelink-ops
+      url: git@git.ucloudadmin.com:unetworks/privatelink/privatelink-ops.git
+      branch: master
+      description: "Privatelink 运维服务"
+      output: Wiki/privatelink/
+
+    - name: privatelink/privatelink-utils
+      url: git@git.ucloudadmin.com:unetworks/privatelink/privatelink-utils.git
+      branch: master
+      description: "Privatelink 工具库"
+      output: Wiki/privatelink/
+
+    - name: privatelink/recycle
+      url: git@git.ucloudadmin.com:unetworks/privatelink/recycle.git
+      branch: master
+      description: "Privatelink 回收站服务"
+      output: Wiki/privatelink/
+
+    - name: utraffic/unetfe
+      url: git@git.ucloudadmin.com:unetworks/utraffic/unetfe.git
+      branch: release
+      description: "UTraffic UNetFE"
+      output: Wiki/utraffic/
+  # 支持 GitHub（SSH 或 HTTPS）：
+  # - name: go-redis
+  #   url: git@github.com:redis/go-redis.git
+  #   branch: master
+  #   description: "Go Redis 客户端"
+  #   output: Wiki/concepts/
+  #
+  # - name: vue/core
+  #   url: https://github.com/vuejs/core.git
+  #   branch: main
+  #   description: "Vue.js 核心框架"
+  #   output: Wiki/concepts/
+
+# ============================================================
+# 外部文章
+# ============================================================
+articles:
+  # 需要定期抓取/追踪的外部资料
+  sources:
+    - name: "UCloud 文档中心"
+      url: https://docs.ucloud.cn
+      type: website
+      description: "UCloud 官方文档"
+
+    - name: "Karpathy LLM Wiki"
+      url: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+      type: gist
+      description: "LLM Wiki 模式原稿"
+
+# ============================================================
+# 内部文档
+# ============================================================
+docs:
+  # 内部文档来源 — 从其他仓库或目录同步
+  paths:
+    - path: ~/Documents/Code/work/docs/privatelink
+      description: "Privatelink 业务内部文档"
+      output: Wiki/privatelink/
+
+  # ONES Wiki 文档 — 同步到 raw/docs/ones-wiki-{space}.db
+  ones_wiki:
+    - space_uuid: S6ztZBSc
+      parent_uuid: Xqqagzxe
+      description: "NPL-网络产品研发中心"
+      depth: 2                      # depth=2 = 子+孙页面
+
+# ============================================================
+# 认证信息（全部通过环境变量引用）
+# ============================================================
+auth:
+  gitlab:
+    # GitLab 部署令牌（用于克隆私有仓库）
+    # 设置方式：export MYWIKI_GITLAB_TOKEN=xxx
+    token: ${MYWIKI_GITLAB_TOKEN}
+    # SSH 密钥优先级高于 token
+    ssh_key: ${MYWIKI_SSH_KEY:-~/.ssh/id_rsa}

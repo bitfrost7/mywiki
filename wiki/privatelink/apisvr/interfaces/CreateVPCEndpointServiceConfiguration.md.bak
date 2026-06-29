@@ -1,0 +1,206 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: CreateVPCEndpointServiceConfiguration | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# CreateVPCEndpointServiceConfiguration
+
+## 描述
+创建 VPC 终端节点服务配置接口。该接口负责创建终端节点服务配置，支持 ALB、NLB、IP 三种资源类型，包含完整的资源验证、网络配置、计费模式和 SNAT IP 分配功能。支持服务提供商和终端节点两种付费模式，提供自动连接接受、带宽配置等高级特性。
+
+## 调用方式
+| 字段 | 值 |
+|------|:--:|
+| Action | `CreateVPCEndpointServiceConfiguration` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/CreateVPCEndpointServiceConfiguration.go` [[源文件:L128]] |
+
+## 请求结构
+| 字段 | 类型 | 必填 | 说明 | 来源 |
+|------|------|:----:|------|------|
+| ReqBase | ReqBase | ✅ | 基础请求字段 | [[源文件:L20]] |
+| Name | string | ❌ | 终端节点服务的名称，默认值 "Service" | [[源文件:L23]] |
+| Tag | string | ❌ | 终端节点服务所属的业务组ID，不传将显示为 "Default" | [[源文件:L26]] |
+| ChannelId | uint32 | ❌ | 渠道ID | [[源文件:L29]] |
+| Description | string | ❌ | 终端节点服务的描述信息，最大长度200字符 | [[源文件:L32]] |
+| AutoAcceptEnabled | bool | ❌ | 是否自动接受终端节点连接，默认值 false | [[源文件:L35]] |
+| Payer | string | ❌ | 付费方，默认值 "EndpointService"，限定取值：Endpoint/EndpointService。Endpoint：服务使用者，EndpointService: 服务提供商 | [[源文件:L38]] |
+| ConnectBandwidth | int32 | ❌ | 默认连接带宽值。单位Mbps，默认值100，取值范围：100~10000 | [[源文件:L41]] |
+| VPCId | string | ✅ | 服务资源所属的 VPC 资源ID | [[源文件:L44]] |
+| SubnetId | string | ✅ | 服务资源所属的子网资源ID | [[源文件:L47]] |
+| IPVersion | string | ❌ | 终端节点服务分配的 IP 协议，默认值 "IPv4"，限定枚举值：IPv4/DualStack | [[源文件:L50]] |
+| ResourceType | string | ✅ | 服务资源类型，限定枚举值：ALB/NLB/IP。ALB：应用型负载均衡，NLB：网络型负载均衡，IP：IP类型（内部使用） | [[源文件:L53]] |
+| ResourceId | string | ❌ | 服务资源ID，当 ResourceType 为 ALB 或 NLB 时必填 | [[源文件:L56]] |
+| ResourceIP | string | ❌ | 服务资源IP，服务资源有多个内网 IP 时必填，当 ResourceType 为 IP 时必填 | [[源文件:L59]] |
+| SnatIPv4s | []string | ❌ | 指定 SNAT 所用 IPv4 IP，最多4个，非空时忽略 SnatIPCount 参数 | [[源文件:L62]] |
+| SnatIPv6s | []string | ❌ | 指定 SNAT 所用 IPv6 IP，最多4个，非空时忽略 SnatIPCount 参数 | [[源文件:L65]] |
+| SnatIPv4Segment | string | ❌ | 指定 SNAT IPv4 IP 申请所在的网段，必须是 CIDR 格式 | [[源文件:L68]] |
+| SnatIPv6Segment | string | ❌ | 指定 SNAT IPv6 IP 申请所在的网段，必须是 CIDR 格式 | [[源文件:L71]] |
+| SnatIPCount | uint32 | ❌ | SNAT 所用 IP 对数量，默认值为1，取值范围：1~4 | [[源文件:L74]] |
+
+**ReqBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L11]]
+- request_uuid: string - 请求UUID [[源文件:base.go:L12]]
+- top_organization_id: uint32 - 顶层组织ID [[源文件:base.go:L17]]
+- organization_id: uint32 - 组织ID [[源文件:base.go:L18]]
+- az_group: uint32 - 可用区组 [[源文件:base.go:L19]]
+
+## 额外验证规则
+在参数校验基础上，额外的业务逻辑验证：
+1. **资源类型与资源ID/IP关系**：
+   - 当 ResourceType 为 ALB 或 NLB 时，ResourceId 必填 [[源文件:L85-L87]]
+   - 当 ResourceType 为 IP 时，ResourceIP 必填 [[源文件:L88-L90]]
+2. **IP版本与SNAT IP一致性**：
+   - 当 IPVersion 为 IPv4 时，SnatIPv6s 必须为空 [[源文件:L91-L93]]
+   - 当同时指定 SnatIPv4s 和 SnatIPv6s 时，数量必须相等 [[源文件:L94-L96]]
+
+## 默认值设置
+| 字段 | 默认值 | 来源 |
+|------|:------:|------|
+| Payer | "EndpointService" | [[源文件:L101-L103]] |
+| ConnectBandwidth | 100 | [[源文件:L104-L106]] |
+| IPVersion | "IPv4" | [[源文件:L116-L118]] |
+| Name | "Service" | [[源文件:L119-L121]] |
+| Tag | "Default" | [[源文件:L122-L124]] |
+| SnatIPCount | 根据 SnatIPv4s 或 SnatIPv6s 数量设置，若无指定则默认为1 | [[源文件:L107-L115]] |
+
+## 响应结构
+| 字段 | 类型 | 说明 | 来源 |
+|------|------|------|------|
+| RespBase | RespBase | 基础响应字段 | [[源文件:L77-L78]] |
+| ServiceId | string | 创建的终端节点服务ID | [[源文件:L79-L80]] |
+
+**RespBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L23]]
+- RetCode: int - 返回码，0表示成功 [[源文件:base.go:L24]]
+- Message: string - 返回消息 [[源文件:base.go:L25]]
+
+## 业务逻辑
+1. **解析校验请求参数**：使用 `parseInput` 方法解析请求并验证必填字段 [[源文件:L131-L136]]
+2. **执行额外验证**：调用 `extraValidate` 方法验证资源类型、IP版本与SNAT IP的逻辑关系 [[源文件:L137-L140]]
+3. **设置默认值**：调用 `setDefaultValue` 方法为可选字段设置默认值 [[源文件:L141]]
+
+4. **IP类型服务权限检查**：
+   - 对于可见资源，检查用户是否允许创建IP类型服务 [[源文件:L144-L149]]
+   - 使用白名单机制控制权限
+
+5. **NLB类型支持检查**：
+   - 检查配置是否支持NLB资源类型 [[源文件:L151-L153]]
+
+6. **网络资源验证**：
+   - 验证VPC和子网信息的有效性 [[源文件:L156-L159]]
+   - 验证VPC与IP版本的兼容性
+
+7. **资源信息校验**：
+   - 对于ALB/NLB类型，验证资源ID的有效性 [[源文件:L162-L167]]
+   - 获取并验证资源IP
+
+8. **IP地址验证**：
+   - 验证ResourceIP的格式和有效性 [[源文件:L170-L174]]
+   - 对于IP类型资源，检查IP是否在VPC内 [[源文件:L175-L180]]
+   - 验证IP版本与IP地址类型的一致性 [[源文件:L181-L183]]
+
+9. **SNAT IP验证**：
+   - 验证指定的SNAT IP是否合法 [[源文件:L186-L199]]
+   - 检查IP地址是否在子网范围内
+   - 如果指定了具体的IP，则忽略对应的网段参数
+
+10. **创建服务资源**：
+    - 在资源系统中创建终端节点服务资源 [[源文件:L202-L205]]
+    - 生成唯一的ServiceId [[源文件:L292-L297]]
+
+11. **计费资源购买**：
+    - 如果付费方为服务提供商（EndpointService），购买后付费资源 [[源文件:L208-L215]]
+    - 否则跳过购买步骤
+
+12. **数据库记录**：
+    - 在数据库中创建服务记录 [[源文件:L217-L222]]
+    - 包含服务配置、计费模式、网络信息等
+
+13. **创建L4网关**：
+    - 为私有连接创建L4网关 [[源文件:L224-L229]]
+
+14. **分配SNAT IP地址**：
+    - 分配IPv4 SNAT IP [[源文件:L232-L237]]
+    - 如果是双栈模式，分配IPv6 SNAT IP [[源文件:L240-L255]]
+    - 更新数据库中的SNAT IP记录 [[源文件:L256-L261]]
+
+15. **激活资源系统**：
+    - 更新资源系统中的扩展信息 [[源文件:L264-L268]]
+    - 激活资源系统
+
+## 错误处理
+| 错误场景 | 错误码 | 说明 | 来源 |
+|----------|:------:|------|------|
+| 请求参数验证失败 | 230 | RequestParamsErr | [[源文件:L135]] |
+| 资源类型与资源ID不匹配 | 230 | RequestParamsErr | [[源文件:L139]] |
+| 不允许创建IP类型服务 | 230 | RequestParamsErr | [[源文件:L147]] |
+| 不支持NLB类型 | 217832 | NotSupportNLBErr | [[源文件:L152]] |
+| VPC和子网验证失败 | 对应错误码 | 各种VPC/子网相关错误 | [[源文件:L158]] |
+| 资源ID验证失败 | 对应错误码 | 资源不存在或权限不足 | [[源文件:L165]] |
+| 不支持IPv6 | 217827 | NotSupportIPv6Err | [[源文件:L182]] |
+| SNAT IP验证失败 | 对应错误码 | IP不在子网内或格式错误 | [[源文件:L189]] |
+| 资源配额超限 | 217818 | ResourceQuotaExceededErr | [[源文件:L285]] |
+| VPC分配IP失败 | 217820 | VPCAllocateIPErr | [[源文件:L236]] |
+| VPC不支持IPv6 | 217827 | VPCNotSupportIPv6Err | [[源文件:L248]] |
+| 内部服务器错误 | 500 | InternalServerErr | [[源文件:L173]] |
+
+## 典型用例
+1. **创建负载均衡服务**：
+   - ResourceType: "ALB" 或 "NLB"
+   - 指定对应的 ResourceId
+   - 设置连接带宽和付费模式
+   - 自动分配SNAT IP对
+
+2. **创建IP类型服务（内部使用）**：
+   - ResourceType: "IP"
+   - 指定 ResourceIP
+   - 需要白名单权限才能创建
+   - 适用于内部系统直接IP访问
+
+3. **双栈网络服务**：
+   - IPVersion: "DualStack"
+   - 分配IPv4和IPv6 SNAT IP对
+   - 确保VPC支持IPv6
+
+4. **服务提供商付费模式**：
+   - Payer: "EndpointService"
+   - 系统自动购买后付费资源
+   - 服务提供商承担费用
+
+5. **终端节点付费模式**：
+   - Payer: "Endpoint"
+   - 终端节点使用者付费
+   - 不进行资源购买
+
+6. **指定SNAT IP**：
+   - 直接指定 SnatIPv4s 和 SnatIPv6s
+   - 忽略 SnatIPCount 参数
+   - 适用于特定IP地址需求
+
+## 回滚机制
+创建过程中出现任何失败都会触发回滚操作，确保数据一致性 [[源文件:L352-L402]]：
+1. **删除顺序**：
+   - 删除数据库中的服务记录（软删除）
+   - 删除SNAT IP数据库记录
+   - 删除L4网关
+   - 释放已分配的IPv4/IPv6地址
+   - 取消已购买的计费资源
+   - 删除资源系统中的记录
+
+2. **回滚触发条件**：
+   - 任何步骤失败都会触发完整回滚
+   - 每个步骤记录操作状态，确保按需回滚
+
+## 辅助函数
+1. **createServiceResource**：创建资源系统中的终端节点服务资源 [[源文件:L276-L298]]
+2. **buyEndpointServicePostPaidResource**：购买后付费资源 [[源文件:L300-L310]]
+3. **updateVPCEndpointServiceResourceExtendInfo**：更新资源扩展信息并激活资源 [[源文件:L312-L327]]
+4. **createServiceInDB**：在数据库中创建服务记录 [[源文件:L329-L350]]
+5. **createSnatIpsInDB**：在数据库中创建SNAT IP记录 [[源文件:L404-L427]]
+6. **rollbackCreateService**：完整的回滚函数，处理所有资源清理 [[源文件:L352-L402]]
+
+## 相关接口
+- [[privatelink/apisvr/interfaces/DeleteVPCEndpointServiceConfiguration]] - 删除终端节点服务配置
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointServiceConfiguration]] - 查询终端节点服务配置详情
+- [[privatelink/apisvr/interfaces/UpdateVPCEndpointServiceAttribute]] - 更新终端节点服务属性
+- [[privatelink/apisvr/interfaces/CreateVPCEndpoint]] - 创建终端节点
+- [[privatelink/apisvr/interfaces/AddUsersToVPCEndpointService]] - 添加用户到终端节点服务白名单

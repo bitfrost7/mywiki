@@ -1,0 +1,110 @@
+---
+title: DescribeVPCEndpointServiceConfiguration
+type: api
+tags:
+  - privatelink/apisvr
+  - L1
+  - api
+confidence: 7
+agent: writer
+source: api/DescribeVPCEndpointServiceConfiguration.go
+created: 2026-06-29
+---
+
+# DescribeVPCEndpointServiceConfiguration
+
+## 描述
+
+查询VPC终端节点服务配置信息接口[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL47]]。该接口提供VPC终端节点服务的配置详情查询功能，支持通过服务ID、VPC、子网等多维度筛选，支持分页查询[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL66-L70]]。
+
+接口实现了两种访问模式：
+1. 普通API模式：`DescribeVPCEndpointServiceConfiguration`，用于外部用户调用[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL47]]
+2. 内部API模式：`IDescribeVPCEndpointServiceConfiguration`，提供完整资源可见性[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL52]]
+
+## 调用方式
+
+| 字段 | 值 |
+|------|:--:|
+| Action | `DescribeVPCEndpointServiceConfiguration` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 源码 | `api/DescribeVPCEndpointServiceConfiguration.go` |
+
+## 请求结构
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `ServiceIds` | `[]string` | ❌ | 服务ID数组。如果非空，则忽略其他过滤条件[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL18-L19]]，最大长度20[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL19]] |
+| `VPCId` | `string` | ❌ | 限定所在的VPC[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL21-L22]] |
+| `SubnetId` | `string` | ❌ | 限定所在的子网[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL24-L25]] |
+| `Offset` | `uint32` | ❌ | 数据偏移量，默认为0[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL27-L28]] |
+| `Limit` | `uint32` | ❌ | 数据分页值，默认为100[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL30-L31]] |
+| `ReqBase`字段继承自基类，包含`TopOrgID`、`OrgID`、`AzGroup`等必填字段[[源文件:api/base.goL15-L20]] |
+
+**注意**：当`ServiceIds`非空时，将忽略`VPCId`和`SubnetId`过滤条件[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL66-L70]]
+
+## 响应结构
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `TotalCount` | `uint32` | 匹配的服务总数[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL35]] |
+| `Services` | `[]*EndpointServiceConfigurationInfo` | 服务配置信息列表[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL36]] |
+
+### EndpointServiceConfigurationInfo 结构
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `ServiceId` | `string` | 服务ID[[源文件:api/base.goL53]] |
+| `Description` | `string` | 服务描述[[源文件:api/base.goL54]] |
+| `Name` | `string` | 资源名称，来自资源平台[[源文件:api/base.goL55]] |
+| `Tag` | `string` | 资源标签，来自资源平台[[源文件:api/base.goL56]] |
+| `AutoAcceptEnabled` | `bool` | 是否自动接受连接[[源文件:api/base.goL57]] |
+| `Payer` | `string` | 支付方（转换自数值）[[源文件:api/base.goL58]] |
+| `VPCId` | `string` | VPC ID[[源文件:api/base.goL59]] |
+| `SubnetId` | `string` | 子网ID[[源文件:api/base.goL60]] |
+| `IPVersion` | `string` | IP版本（转换自数值）[[源文件:api/base.goL61]] |
+| `ConnectBandwidth` | `uint32` | 连接带宽(Mbps)[[源文件:api/base.goL62]] |
+| `ResourceType` | `string` | 资源类型（转换自数值）[[源文件:api/base.goL63]] |
+| `ResourceId` | `string` | 资源ID[[源文件:api/base.goL64]] |
+| `ResourceIP` | `string` | 资源IP地址[[源文件:api/base.goL65]] |
+| `SnatIPs` | `[]string` | SNAT IP列表[[源文件:api/base.goL66]] |
+| `CreateTime` | `uint32` | 创建时间(Unix时间戳)[[源文件:api/base.goL67]] |
+
+**响应继承自RespBase结构**，包含`Action`、`RetCode`、`Message`字段[[源文件:api/base.goL22-L26]]
+
+## 业务逻辑
+
+1. **参数验证与默认值设置**[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL58-L70]]
+   - 解析请求参数，校验必填字段
+   - 设置默认分页值：`Limit`默认为100[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL40-L45]]
+   - 当`ServiceIds`非空时，清空`VPCId`和`SubnetId`过滤条件
+
+2. **数据库查询服务配置**[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL72-L76]]
+   - 调用`DescribeVPCEndpointServiceConfigurations`查询数据库中的服务信息[[源文件:db/db.goL511]]
+   - 支持按服务ID、VPC、子网过滤
+   - 包含`ServiceInfo`基本信息：服务ID、描述、自动接受标志、支付方、VPC、子网、IP版本等[[源文件:db/db.goL494-L510]]
+
+3. **资源平台查询补充信息**[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL78-L90]]
+   - 如果数据库有记录，向资源平台查询详细信息
+   - 两种查询模式：
+     a. 按服务ID查询：`GetVPCEndpointServiceResourceListByIds`[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL82]]
+     b. 按过滤条件查询：`GetVPCEndpointServiceResourceList`[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL84]]
+   - 获取资源名称(`name`)、标签(`tag`)等扩展信息[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL134-L137]]
+
+4. **数据构建与返回**[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL92-L104]]
+   - 调用`buildVPCEndpointServiceConfigurationInfosResponse`构建响应[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL106]]
+   - 合并数据库和资源平台信息
+   - 汇总SNAT IP列表[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL127-L129]]
+   - 按创建时间降序排序[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL145-L147]]
+   - 设置`TotalCount`（来自资源平台响应）[[源文件:api/DescribeVPCEndpointServiceConfiguration.goL95-L98]]
+
+## 错误处理
+
+- **参数错误**：`RequestParamsErr`(230)，请求参数格式错误[[源文件:api/error.goL49]]
+- **内部错误**：`InternalServerErr`(500)，数据库或资源平台查询失败[[源文件:api/error.goL50]]
+- **资源不存在**：`ResourceNotFoundErr`(217803)，资源不存在或已删除[[源文件:api/error.goL55]]
+
+## 相关接口
+
+- [[privatelink/apisvr/interfaces/CreateVPCEndpointServiceConfiguration|CreateVPCEndpointServiceConfiguration]] - 创建VPC终端节点服务配置
+- [[privatelink/apisvr/interfaces/DeleteVPCEndpointServiceConfiguration|DeleteVPCEndpointServiceConfiguration]] - 删除VPC终端节点服务配置

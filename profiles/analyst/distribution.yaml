@@ -1,0 +1,8 @@
+name: analyst
+version: 1.0.0
+description: "代码分析 — 读 AST + 源码 → L2 分组 + L3 业务流/概念，然后创建全部子卡"
+hermes_requires: ">=0.12.0"
+env_requires:
+distribution_owned:
+  - SOUL.md
+  - skills/

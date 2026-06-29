@@ -1,0 +1,100 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: DeleteVPCEndpointServiceConfiguration | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# DeleteVPCEndpointServiceConfiguration
+
+## 描述
+
+删除指定的 VPC 终端节点服务配置。此接口支持两种删除模式：
+- **普通删除**：检查服务是否有活跃连接，存在活跃连接时拒绝删除
+- **强制删除**：忽略活跃连接检查，直接删除服务配置
+
+删除操作是软删除，会标记删除时间，并异步清理相关资源（IP地址、计费资源、L4网关、白名单等）。
+
+[[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L1-L36]]
+
+## 调用方式
+
+| 字段 | 值 |
+|------|:--:|
+| Action | `DeleteVPCEndpointServiceConfiguration` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/DeleteVPCEndpointServiceConfiguration.go` |
+
+## 请求结构
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| ServiceId | string | ✅ | 终端节点服务的ID |
+| Force | bool | ❌ | 是否强制删除（默认 false） |
+| TopOrgID | uint32 | ✅ | 顶层组织ID（继承自 ReqBase） |
+| OrgID | uint32 | ✅ | 组织ID（继承自 ReqBase） |
+| AzGroup | string | ✅ | 可用区组（继承自 ReqBase） |
+
+[[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L9-L14]]
+
+内部接口版本 (`IDeleteVPCEndpointServiceConfiguration`) 具有相同结构：
+[[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L14-L22]]
+
+## 响应结构
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| 无额外字段 | - | 基础响应结构，继承自 RespBase |
+| RequestId | string | 请求ID（继承自 RespBase） |
+| Message | string | 消息（继承自 RespBase） |
+| RetCode | int | 返回码（继承自 RespBase） |
+
+[[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L16-L18]]
+
+## 业务逻辑
+
+1. **参数解析与校验**：解析请求参数，验证 ServiceId 必填。
+   [[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L24-L29]]
+
+2. **服务状态检查**：查询服务信息，检查服务是否已删除（deleteTime != 0），已删除则直接返回成功。
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L48-L64]]
+
+3. **连接检查**：获取服务的活跃连接数，如果存在活跃连接且未启用强制删除，返回 `ActiveConnectionsExistErr`。
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L67-L74]]
+
+4. **软删除标记**：在数据库中标记服务为已删除状态。
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L81-L84]]
+
+5. **异步资源清理**（在 goroutine 中执行）：
+   - 释放服务的 SNAT IPv4 和 IPv6 地址
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L86-L98]]
+   - 清理服务的 SNAT IP 记录
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L100-L103]]
+   - 如果服务是后付费模式，删除计费资源
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L105-L109]]
+   - 删除服务的资源记录
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L110-L113]]
+   - 删除关联的 L4 网关配置
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L115-L117]]
+   - 删除服务的白名单记录
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L119-L121]]
+   - 更新关联终端节点的状态为 `ConnectStatusServiceDeletedInt`
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L123-L126]]
+   - 关闭连接的监控信息
+   [[源文件:api/IDeleteVPCEndpointServiceConfiguration.go:L128]]
+
+6. **返回结果**：同步返回操作结果，异步任务在后台继续执行。
+   [[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L31-L35]]
+
+## AST 引用
+
+- **文件节点**：`DeleteVPCEndpointServiceConfiguration.go` → [[Community 38]]
+  [[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L1]]
+- **请求结构**：`DeleteVPCEndpointServiceConfigurationReq` → [[Community 38]]
+  [[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L9]]
+- **响应结构**：`DeleteVPCEndpointServiceConfigurationResp` → [[Community 38]]
+  [[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L16]]
+- **API 方法**：`.DeleteVPCEndpointServiceConfiguration()` → [[Community 62]]
+  [[源文件:api/DeleteVPCEndpointServiceConfiguration.go:L21]]
+
+## 相关接口
+
+- [[privatelink/apisvr/interfaces/CreateVPCEndpointServiceConfiguration|CreateVPCEndpointServiceConfiguration]] - 创建 VPC 终端节点服务配置
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointServiceConfiguration|DescribeVPCEndpointServiceConfiguration]] - 查询 VPC 终端节点服务配置详情
+- [[privatelink/apisvr/interfaces/IDeleteVPCEndpointServiceConfiguration|IDeleteVPCEndpointServiceConfiguration]] - 内部删除接口（支持 invisible 参数）

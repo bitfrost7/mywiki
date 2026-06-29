@@ -1,0 +1,12 @@
+name: reviewer
+version: 2.0.0
+description: "质量审计 — 对照 graph.json 验证文档准确性，产出审查报告"
+hermes_requires: ">=0.12.0"
+env_requires:
+  - name: API_KEY
+    description: "Modelverse API Key"
+    required: true
+distribution_owned:
+  - SOUL.md
+  - config.yaml
+  - skills/

@@ -1,0 +1,11 @@
+name: synthesizer
+version: 1.0.0
+description: "文档合成 — 读所有已通过的 L1/L3 文档 → 写 L2 总览/架构/接口索引"
+hermes_requires: ">=0.12.0"
+env_requires:
+  - name: API_KEY
+    description: "Modelverse API Key"
+    required: true
+distribution_owned:
+  - SOUL.md
+  - skills/

@@ -1,0 +1,164 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: DescribeVPCEndpointConnections | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# DescribeVPCEndpointConnections
+
+## 描述
+查询 VPC 终端节点连接列表接口。该接口负责根据服务ID、终端节点ID、连接状态等条件查询和筛选终端节点连接信息，支持分页查询功能。当指定终端节点ID时，将忽略其他过滤条件。
+
+## 调用方式
+| 字段 | 值 |
+|------|:--:|
+| Action | `DescribeVPCEndpointConnections` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/DescribeVPCEndpointConnections.go` [[源文件:L48]] |
+
+## 请求结构
+| 字段 | 类型 | 必填 | 说明 | 来源 |
+|------|------|:----:|------|------|
+| ReqBase | ReqBase | ✅ | 基础请求字段 | [[源文件:L14]] |
+| ServiceId | string | ✅ | 服务ID | [[源文件:L16-L17]] |
+| Owner | uint32 | ❌ | 终端节点所属的公司ID | [[源文件:L19-L20]] |
+| EndpointId | string | ❌ | 终端节点的ID，若非空，则将忽略其他过滤条件 | [[源文件:L22-L23]] |
+| ConnectionStatus | string | ❌ | 终端节点连接状态，限定枚举值：Pending/Connected/Disconnected | [[源文件:L25-L26]] |
+| Offset | uint32 | ❌ | 数据偏移量，默认值为0 | [[源文件:L28-L29]] |
+| Limit | uint32 | ❌ | 数据分页值，默认值为100 | [[源文件:L31-L32]] |
+
+**ReqBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L11]]
+- request_uuid: string - 请求UUID [[源文件:base.go:L12]]
+- top_organization_id: uint32 - 顶层组织ID [[源文件:base.go:L17]]
+- organization_id: uint32 - 组织ID [[源文件:base.go:L18]]
+- az_group: uint32 - 可用区组 [[源文件:base.go:L19]]
+
+## 请求验证规则
+1. **必填字段验证**：
+   - ServiceId 必须非空 [[源文件:L51-L55]]
+2. **连接状态枚举值验证**：
+   - ConnectionStatus 必须是 "Pending"、"Connected" 或 "Disconnected" 之一 [[源文件:L26]]
+3. **EndpointId优先逻辑**：
+   - 当 EndpointId 不为空时，忽略 Owner 和 ConnectionStatus 过滤条件 [[源文件:L58-L62]]
+
+## 默认值设置
+| 字段 | 默认值 | 来源 |
+|------|:------:|------|
+| Limit | 100 | [[源文件:L43-L45]] |
+
+## 响应结构
+| 字段 | 类型 | 说明 | 来源 |
+|------|------|------|------|
+| RespBase | RespBase | 基础响应字段 | [[源文件:L34-L35]] |
+| TotalCount | uint32 | 连接总数 | [[源文件:L36]] |
+| Connections | []*EndpointConnectionInfo | 连接列表 | [[源文件:L37]] |
+
+**RespBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L23]]
+- RetCode: int - 返回码，0表示成功 [[源文件:base.go:L24]]
+- Message: string - 返回消息 [[源文件:base.go:L25]]
+
+**EndpointConnectionInfo 结构**：
+| 字段 | 类型 | 说明 | 来源 |
+|------|------|------|------|
+| ServiceId | string | 服务ID | [[源文件:base.go:L80]] |
+| Owner | uint32 | 所属公司ID | [[源文件:base.go:L81]] |
+| EndpointId | string | 终端节点ID | [[源文件:base.go:L82]] |
+| ConnectBandwidth | uint32 | 连接带宽（Mbps） | [[源文件:base.go:L83]] |
+| ConnectionStatus | string | 连接状态：Pending/Connected/Disconnected/ServiceDeleted | [[源文件:base.go:L84]] |
+| CreateTime | uint32 | 创建时间（Unix时间戳） | [[源文件:base.go:L85]] |
+| UpdateTime | uint32 | 更新时间（Unix时间戳） | [[源文件:base.go:L86]] |
+
+## 业务逻辑
+1. **解析校验请求参数**：使用 `parseInput` 方法解析请求并验证必填字段 [[源文件:L51-L55]]
+2. **设置默认值**：调用 `setDefaultValue` 方法为 Limit 字段设置默认值100 [[源文件:L56]]
+3. **过滤条件优先级处理**：
+   - 如果指定了 EndpointId，忽略 Owner 和 ConnectionStatus 过滤条件 [[源文件:L58-L62]]
+   - Owner 设置为0，ConnectionStatus 设置为空字符串 [[源文件:L59-L61]]
+4. **服务存在性验证**：
+   - 根据 ServiceId、OrgID 查询服务信息 [[源文件:L64-L68]]
+   - 服务不存在返回 ResourceNotFoundErr 错误 [[源文件:L69-L75]]
+   - 服务ID重复返回 InternalServerErr 错误 [[源文件:L76-L79]]
+5. **查询连接列表**：
+   - 调用数据库层 `DescribeVPCEndpointConnections` 方法查询连接数据 [[源文件:L81]]
+   - 传入查询条件：Owner（公司ID）、ConnectionStatus（连接状态码）、ServiceId、EndpointId、Offset、Limit [[源文件:L81]]
+   - 使用 `GetConnectStatusCode` 函数将字符串状态转换为状态码 [[源文件:L81]]
+6. **构建响应数据**：
+   - 调用 `buildVPCEndpointConnectionsResponse` 方法将数据库模型转换为响应格式 [[源文件:L87]]
+   - 使用 `GetConnectStatusName` 函数将状态码转换为字符串状态 [[源文件:base.go:L79-L107]]
+7. **返回查询结果**：
+   - 返回包含 TotalCount（总数）和 Connections（连接列表）的响应 [[源文件:L89-L93]]
+
+## 状态转换函数
+1. **GetConnectStatusCode**：将连接状态字符串转换为状态码 [[源文件:convert.go:L105-L118]]
+   - "Pending" → 0 [[源文件:convert.go:L107-L108]]
+   - "Connected" → 1 [[源文件:convert.go:L109-L110]]
+   - "Disconnected" → 2 [[源文件:convert.go:L111-L112]]
+   - "ServiceDeleted" → 100 [[源文件:convert.go:L113-L114]]
+   - 其他值 → 10000 [[源文件:convert.go:L115-L116]]
+
+2. **GetConnectStatusName**：将连接状态码转换为字符串状态 [[源文件:convert.go:L120-L133]]
+   - 0 → "Pending" [[源文件:convert.go:L122-L123]]
+   - 1 → "Connected" [[源文件:convert.go:L124-L125]]
+   - 2 → "Disconnected" [[源文件:convert.go:L126-L127]]
+   - 100 → "ServiceDeleted" [[源文件:convert.go:L128-L129]]
+   - 其他值 → "Disconnected" [[源文件:convert.go:L130-L131]]
+
+## 错误处理
+| 错误场景 | 错误码 | 说明 | 来源 |
+|----------|:------:|------|------|
+| 请求参数验证失败 | 230 | RequestParamsErr | [[源文件:L54]] |
+| 服务不存在 | 404 | ResourceNotFoundErr | [[源文件:L70-L74]] |
+| 服务ID重复（系统错误） | 500 | InternalServerErr | [[源文件:L77-L78]] |
+| 数据库查询失败 | 500 | InternalServerErr | [[源文件:L82-L84]] |
+| 内部服务器错误 | 500 | InternalServerErr | [[源文件:L54]] |
+
+## 典型用例
+1. **查询指定服务的所有连接**：
+   - ServiceId: "svc-xxxx"
+   - 不指定其他过滤条件
+   - 返回该服务下的所有连接列表
+
+2. **按公司ID筛选连接**：
+   - ServiceId: "svc-xxxx"
+   - Owner: 12345（公司ID）
+   - 返回指定公司在该服务下的连接列表
+
+3. **按连接状态筛选**：
+   - ServiceId: "svc-xxxx"
+   - ConnectionStatus: "Connected"
+   - 返回该服务下处于已连接状态的终端节点列表
+
+4. **查询特定终端节点连接详情**：
+   - ServiceId: "svc-xxxx"
+   - EndpointId: "endpoint-xxxx"
+   - 忽略其他过滤条件，直接返回指定终端节点的连接信息
+
+5. **分页查询连接列表**：
+   - ServiceId: "svc-xxxx"
+   - Offset: 20（跳过前20条）
+   - Limit: 50（每页50条）
+   - 返回分页后的连接列表
+
+## 数据模型映射
+**数据库模型 TVpcEndpoint → EndpointConnectionInfo 映射**：
+| 数据库字段 | 响应字段 | 说明 | 来源 |
+|-----------|----------|------|------|
+| ServiceID | ServiceId | 服务ID | [[源文件:L100]] |
+| CompanyID | Owner | 公司ID | [[源文件:L101]] |
+| EndpointID | EndpointId | 终端节点ID | [[源文件:L102]] |
+| ConnectBw | ConnectBandwidth | 连接带宽 | [[源文件:L103]] |
+| ConnectStatus | ConnectionStatus | 连接状态（经过转换） | [[源文件:L104]] |
+| InsertTime | CreateTime | 创建时间 | [[源文件:L105]] |
+| UpdateTime | UpdateTime | 更新时间 | [[源文件:L106]] |
+
+## 辅助函数
+1. **setDefaultValue**：设置 Limit 默认值100 [[源文件:L41-L46]]
+2. **buildVPCEndpointConnectionsResponse**：将数据库模型转换为响应结构 [[源文件:L96-L110]]
+3. **GetConnectStatusCode**：连接状态字符串转状态码 [[源文件:convert.go:L105-L118]]
+4. **GetConnectStatusName**：连接状态码转字符串 [[源文件:convert.go:L120-L133]]
+
+## 相关接口
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpoints]] - 查询终端节点列表
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpointServiceConfiguration]] - 查询终端节点服务配置详情
+- [[privatelink/apisvr/interfaces/AcceptVPCEndpointConnection]] - 接受终端节点连接
+- [[privatelink/apisvr/interfaces/RejectVPCEndpointConnection]] - 拒绝终端节点连接
+- [[privatelink/apisvr/interfaces/CreateVPCEndpoint]] - 创建终端节点

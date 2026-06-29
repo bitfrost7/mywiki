@@ -1,0 +1,122 @@
+%% state: pending-review | confidence: 7 | type: api | sources: privatelink/apisvr | action: DeleteVPCEndpoint | stage: L1 | agent: writer | created: 2026-06-29 %%
+
+# DeleteVPCEndpoint
+
+## 描述
+删除 VPC 终端节点（VPCEndpoint）接口。该接口负责软删除指定的终端节点，执行数据清理、资源释放和连接状态更新等操作。支持多资源类型的协调清理，包括计费资源清理、网络资源释放和连接信息更新。
+
+## 调用方式
+| 字段 | 值 |
+|------|:--:|
+| Action | `DeleteVPCEndpoint` |
+| 协议 | HTTP |
+| 方法 | POST |
+| 来源 | `api/DeleteVPCEndpoint.go` [[源文件:L21]] |
+
+## 请求结构
+| 字段 | 类型 | 必填 | 说明 | 来源 |
+|------|------|:----:|------|------|
+| ReqBase | ReqBase | ✅ | 基础请求字段 | [[源文件:L9]] |
+| EndpointId | string | ✅ | 终端节点的ID | [[源文件:L13]] |
+
+**ReqBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L11]]
+- request_uuid: string - 请求UUID [[源文件:base.go:L12]]
+- top_organization_id: uint32 - 顶层组织ID [[源文件:base.go:L17]]
+- organization_id: uint32 - 组织ID [[源文件:base.go:L18]]
+- az_group: uint32 - 可用区组 [[源文件:base.go:L19]]
+
+## 响应结构
+| 字段 | 类型 | 说明 | 来源 |
+|------|------|------|------|
+| RespBase | RespBase | 基础响应字段 | [[源文件:L16]] |
+
+**RespBase 包含字段**：
+- Action: string - 接口名称 [[源文件:base.go:L23]]
+- RetCode: int - 返回码，0表示成功 [[源文件:base.go:L24]]
+- Message: string - 返回消息 [[源文件:base.go:L25]]
+
+## 业务逻辑
+1. **解析请求参数**：使用 `parseInput` 方法解析请求并验证必填字段 [[源文件:L24]] [[源文件:IDeleteVPCEndpoint.go:L29]]
+2. **获取终端节点信息**：调用 `GetVPCEndpointsWithDeleted` 获取终端节点详情，包含已删除的记录 [[源文件:IDeleteVPCEndpoint.go:L42]] [[源文件:db/db.go:L366]]
+   - 根据 EndpointId 和 AccountId 查询
+   - 包含已删除的记录以便状态检查
+3. **数据存在性检查**：
+   - 如果查询结果为空，返回 `ResourceNotFoundErr` 错误 [[源文件:IDeleteVPCEndpoint.go:L46-L48]]
+   - 如果查询到多条记录，记录错误日志并返回 `InternalServerErr` [[源文件:IDeleteVPCEndpoint.go:L49-L52]]
+4. **状态检查**：
+   - 检查终端节点的 `DeleteTime` 字段是否为0
+   - 如果已删除（DeleteTime ≠ 0），直接返回成功 [[源文件:IDeleteVPCEndpoint.go:L57-L59]]
+5. **软删除操作**：调用 `DeleteVPCEndpointSoft` 更新数据库的 DeleteTime 字段 [[源文件:IDeleteVPCEndpoint.go:L60]] [[源文件:db/db.go:L273]]
+   - 设置删除时间为当前时间戳
+   - 条件限制：EndpointId、AccountId 且 DeleteTime 为0
+6. **异步资源清理**（goroutine 异步执行）：
+   - **计费资源清理**：调用 `Ubill.PostPaidDeleteEndpoint` 清理后付费资源 [[源文件:IDeleteVPCEndpoint.go:L66]]
+   - **资源系统清理**：调用 `UResource.DeleteVPCEndpointResource` 从资源系统中删除终端节点 [[源文件:IDeleteVPCEndpoint.go:L70]]
+   - **IPv4 地址释放**：调用 `VPC.FreeIPv4sByIPs` 释放分配的 IPv4 地址 [[源文件:IDeleteVPCEndpoint.go:L74]]
+   - **IPv6 地址释放**（如果存在）：调用 `VPC.UnassignIPv6ByIPs` 释放 IPv6 地址 [[源文件:IDeleteVPCEndpoint.go:L78-L83]]
+   - **连接状态更新**：如果终端节点非停服状态且为已连接状态，异步调用 `CloseConnectInfo` 更新连接信息 [[源文件:IDeleteVPCEndpoint.go:L85-L87]]
+7. **返回成功结果**：所有操作完成后返回成功响应 [[源文件:DeleteVPCEndpoint.go:L33]]
+
+## 错误处理
+| 错误场景 | 错误码 | 说明 | 来源 |
+|----------|:------:|------|------|
+| 请求参数验证失败 | 230 | RequestParamsErr | [[源文件:IDeleteVPCEndpoint.go:L31]] |
+| 资源不存在 | 217803 | ResourceNotFoundErr | [[源文件:IDeleteVPCEndpoint.go:L47]] |
+| 内部服务器错误 | 500 | InternalServerErr | [[源文件:IDeleteVPCEndpoint.go:L44]] |
+| 数据库查询异常 | 500 | InternalServerErr | [[源文件:IDeleteVPCEndpoint.go:L61]] |
+
+## 数据库操作
+1. **GetVPCEndpointsWithDeleted**：查询终端节点详情（包含已删除记录） [[源文件:db/db.go:L366-L393]]
+   - 查询条件：EndpointId、AccountId（可选）、VisibleType（可选）
+   - 查询字段：EndpointID, ServiceID, CompanyID, AccountID, VnetID, SubnetworkID, TunnelID, Ipv4, Ipv6, Mac, ConnectBw, ConnectStatus, VisibleType, InsertTime
+   - 不限制 DeleteTime，允许查询已删除的记录
+
+2. **DeleteVPCEndpointSoft**：软删除终端节点 [[源文件:db/db.go:L273-L283]]
+   - 更新条件：EndpointID、AccountID、DeleteTime 为0
+   - 更新操作：设置 DeleteTime 为当前时间戳
+
+## 资源清理流程
+1. **计费资源**：清理后付费资源计费信息，避免产生不必要的费用
+2. **资源系统**：从全局资源管理系统中移除终端节点资源记录
+3. **网络资源**：
+   - IPv4 地址：归还到子网地址池
+   - IPv6 地址：解除绑定关系（如存在）
+4. **连接管理**：更新连接状态，确保连接信息与实际状态一致
+
+## 并发控制
+- **软删除幂等性**：通过检查 DeleteTime 字段确保删除操作幂等 [[源文件:IDeleteVPCEndpoint.go:L57-L59]]
+- **资源清理异步化**：资源清理操作在独立 goroutine 中执行，不影响主流程响应时间 [[源文件:IDeleteVPCEndpoint.go:L65-L88]]
+- **错误降级**：资源清理失败记录错误日志，但不影响主流程成功返回
+
+## 典型用例
+1. **正常删除终端节点**：
+   - 提供有效的 EndpointId 和组织信息
+   - 系统执行软删除和异步资源清理
+   - 返回成功响应
+
+2. **删除已删除的终端节点**：
+   - 如果终端节点已删除（DeleteTime ≠ 0）
+   - 直接返回成功，跳过实际删除操作
+   - 确保操作的幂等性
+
+3. **跨资源类型清理**：
+   - 系统自动清理计费、网络、连接等多类型资源
+   - 异步执行，提高接口响应速度
+
+## 前置条件
+1. 终端节点必须存在且未被删除
+2. 请求组织必须拥有该终端节点的操作权限
+3. 终端节点关联的计费、网络、连接资源状态正常
+
+## 后置条件
+1. 终端节点记录被标记为已删除（DeleteTime 更新）
+2. 相关计费资源被清理
+3. 网络地址资源被释放回资源池
+4. 连接状态信息被正确更新
+
+## 相关接口
+- [[privatelink/apisvr/interfaces/CreateVPCEndpoint]] - 创建终端节点
+- [[privatelink/apisvr/interfaces/DescribeVPCEndpoints]] - 查询终端节点列表
+- [[privatelink/apisvr/interfaces/UpdateVPCEndpointAttribute]] - 更新终端节点属性
+- [[privatelink/apisvr/interfaces/DeleteVPCEndpointServiceConfiguration]] - 删除终端节点服务配置

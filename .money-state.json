@@ -1,0 +1,100 @@
+{
+  "schema_version": 2,
+  "created_at": "2026-06-25",
+  "profile": {
+    "tier": "T2",
+    "tier_reason": "4年软件开发工程师，会编程能做东西，有5万启动金，匹配 T2「能借 AI 编程做出东西」路线",
+    "skills": [
+      "软件开发（4年经验）",
+      "阅读网文小说",
+      "动手能力强（装电脑/做饭/健身跟教程就能学）",
+      "视频录屏剪辑（基础）"
+    ],
+    "weekly_hours": 30,
+    "startup_capital": 50000,
+    "region": "上海",
+    "can_show_face": false,
+    "language": ["中文"],
+    "notes": "可以露脸但内向偏胖，初期不建议依赖出镜。英语未过四级，出海方向可能需要翻译工具辅助。",
+    "free_token_resource": {
+      "monthly_quota": 2000,
+      "provider": "公司 UToken（国内大模型）",
+      "note": "公司福利免费用，适合做 AI 工具的后端推理，0 推理成本"
+    },
+    "experience_note": "已自己写过 Hermes 插件和 skill 解决工作痛点，有工具开发经验"
+  },
+  "opportunities": [
+    {
+      "id": "opp-tether",
+      "name": "Tether（原 jump-server-cli 剥离开源）",
+      "category": "开发者工具/开源",
+      "for_tier": "T2",
+      "money_source": "开源社区 + 未来托管版付费（$5-10/月/服务器）",
+      "verdict": "可行",
+      "red_flags": [],
+      "suspect_flags": ["需验证 GitHub 上是否有直接竞品", "开源阶段无收入"],
+      "freshness": "2026-06-25 已有内部可用代码（jump-server-cli v2.2.0），需剥离重构",
+      "verify_first_step": "GitHub 搜同类工具 → 剥离代码 → 开源发布 → 看社区反应",
+      "income_expectation": "前8周0收入（开源期），第9周起若热度够推出托管版，10-20付费用户=¥3000-6000/月",
+      "status": "chosen",
+      "found_at": "2026-06-25"
+    },
+    {
+      "id": "opp-chrome-ext",
+      "name": "Chrome 扩展 + 小额付费",
+      "category": "浏览器扩展",
+      "for_tier": "T2",
+      "money_source": "Chrome Web Store 一次性购买/订阅",
+      "verdict": "可行",
+      "red_flags": [],
+      "suspect_flags": ["需找到有人愿意付费的小痛点"],
+      "freshness": "2026-06-25 从独立开发者列表确认有同类盈利产品（如ResellBuddy $9/月）",
+      "verify_first_step": "搜 Chrome Web Store 等你日常开发痛点，找已上架但体验差的扩展做替代品",
+      "income_expectation": "一个扩展月几百到几千，2-3个可稳上3000/月",
+      "status": "candidate",
+      "found_at": "2026-06-25"
+    },
+    {
+      "id": "opp-dev-freelance",
+      "name": "AI 辅助接私活",
+      "category": "技能服务接单",
+      "for_tier": "T2",
+      "money_source": "有技术需求的公司/个人按项目付费",
+      "verdict": "可行",
+      "red_flags": [],
+      "suspect_flags": ["B3（私下对接收款风险，需走平台担保）"],
+      "freshness": "2026-06-25 DevMoneySharing 多个真实案例佐证",
+      "verify_first_step": "闲鱼/程序员社群挂'AI接入/自动化方案定制'服务看咨询量",
+      "income_expectation": "单价高但接单不稳定，月入2000-8000波动大，需攒作品集和口碑",
+      "status": "candidate",
+      "found_at": "2026-06-25"
+    },
+    {
+      "id": "opp-geo-ops",
+      "name": "GEO（生成式引擎优化）代运营",
+      "category": "新方向/红利期",
+      "for_tier": "T2",
+      "money_source": "中小企业按年付费优化AI搜索可见度",
+      "verdict": "存疑",
+      "red_flags": [],
+      "suspect_flags": ["B1（缺少更多本土付费证据）", "需要先学习GEO理论"],
+      "freshness": "2026-06-25 参考价2980元/年起（来自money-find worked-example，需交叉验证）",
+      "verify_first_step": "学GEO基础→免费帮1家本地小店做AI搜索优化→看对方愿不愿续费",
+      "income_expectation": "上限高但前期慢，需先学+验证有没有企业愿买单",
+      "status": "candidate",
+      "found_at": "2026-06-25"
+    }
+  ],
+  "active": {
+    "chosen_id": "opp-tether",
+    "started_at": "2026-06-25",
+    "plan": "PRODUCT.md at /Users/user/Documents/Code/work/projects/tether/PRODUCT.md",
+    "prediction": {
+      "expected_hours": 40,
+      "expected_first_income_days": 60,
+      "expected_income_range": "¥0-6000/月（前60天¥0，之后看托管版发布情况）",
+      "recorded_at": "2026-06-25"
+    }
+  },
+  "retro_log": []
+}

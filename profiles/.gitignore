@@ -1,0 +1,9 @@
+# Runtime data (never commit)
+.env
+state.db
+state.db-*
+*.cache/
+logs/
+sessions/
+workspace/
+memories/

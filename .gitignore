@@ -5,6 +5,10 @@
 **/__pycache__/
 *.pyc
 *.pyo
+*.pyc*
+
+# Repo cache (代码缓存，非 vault 内容)
+.cache/
 
 # Obsidian local config
 .obsidian/
@@ -22,3 +26,15 @@ Thumbs.db
 # Local config (secrets)
 .env
 *.local.yaml
+
+# raw/assets — cloned code repos + AST parse artifacts
+raw/assets/*
+!raw/assets/.gitkeep
+
+# raw/docs — synced doc caches (large files, not vault content)
+raw/docs/*
+!raw/docs/.gitkeep
+
+# SQLite metadata
+mywiki.db
+bin/discuss
